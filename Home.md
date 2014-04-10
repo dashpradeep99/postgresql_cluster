@@ -1,0 +1,1 @@
+Welcome to the PGSQL_HA_CLUSTER wiki!
