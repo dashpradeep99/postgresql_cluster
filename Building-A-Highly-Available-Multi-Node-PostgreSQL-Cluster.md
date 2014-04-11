@@ -426,7 +426,9 @@ The version of PostgreSQL that is in the provided repositories on CentOS 6.5 is 
 
 As of this writing we are using PostgreSQL version 9.3.4
 
-Configure the needed repository.  This must be added to all nodes in the cluster.
+Configure the needed repository.  
+
+This need to be done on **ALL** nodes in the cluster.
 
 ````
 sudo wget http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-centos93-9.3-1.noarch.rpm -O /tmp/pgdg-centos93-9.3-1.noarch.rpm
@@ -440,7 +442,9 @@ With the correct repository configured install the recommended packages.
 sudo yum install postgresql93-server postgresql93-contrib postgresql93-devel
 ````
 
-Initialize the PostgreSQL database via initdb.  We only need to perform this on one node as we'll be transfering the database to the remaing nodes.  I'll be refering to these nodes as PostgreSQL replicas.  We will use node1 as the **Master** from here on out.
+Initialize the PostgreSQL database via initdb.  We only need to perform this on the **Master** node as we'll be transfering the database to the remaing nodes.  I'll be refering to these nodes as PostgreSQL replicas (node2, node3).  
+
+We will use node1 as the **Master** from here on out.
 
 ````
 sudo /etc/init.d/postgresql-9.3 initdb
@@ -460,6 +464,127 @@ When the database was initialized via initdb it configued permissions in the pg_
 This can be a sore spot if your not aware how it was configured and will give an error if trying to create a database with a user that is not currently logged into the system.
 > createdb: could not connect to database postgres: FATAL:  Ident authentication failed for user "myUser"
 
+To avoid this headache modify the pg_hba.conf file to move from the ident scheme to the md5 scheme.  
+
+This needs to be modified on the **Master** node1
+
+````
+sudo sed -i 's/\ ident/\ md5/g' /var/lib/pgsql/9.3/data/pg_hba.conf
+````
+````
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            md5
+# IPv6 local connections:
+host    all             all             ::1/128                 md5
+````
+
+Modify the pg_hba.conf to allow the repclias to connect to the **Master**.  Again in this example we are adding a basic connection line.  It is recommended that you tune this based on your infrasturture for proper secutiry.  
+
+This needs to be modified on the **Master** node1
+
+````
+cat << EOF >> /var/lib/pgsql/9.3/data/pg_hba.conf
+
+# Allowing Replicas to connect in for streaming replication
+host    replicator     all             all                     trust
+EOF
+````
+
+To assit with the replication process and some basic security, a seperate replication user account should be created.
+
+````
+sudo runuser -l postgres -c "psql -c \"CREATE USER replicator REPLICATION LOGIN ENCRYPTED PASSWORD 'replaceme';\""
+````
+
+Configure the bind address the PostgreSQL will listen on.    This needs to be set to * so the PostgreSQL service will listen on any address.  PostgreSQL will scan for new addresses and automatically bind to them as they appear on the node.  This is required to allow PostgreSQL to start listening on the **VIP** address in the event of node failover.
+
+Modify the postgresql.conf with your favorite text editor and modify the listen_addresses parameter or add an additional parameter to the end of the configureation file. 
+
+This needs to be modified on the **Master** node1
+
+````
+sudo echo "listen_addresses = '*'" >> /var/lib/pgsql/9.3/data/postgresql.conf
+````
+
+Configure PostgreSQL steaming replication.  This example uses a simple archive command its recommned to use a wrapper script to assist in syncing the archived WAL logs to the other nodes in the cluster.  These settings are very basic and will need to be tuned based on your infrastructure.  
+
+This needs to be modified on the **Master** node1
+
+````
+cat << EOF >> /var/lib/pgsql/9.3/data/postgresql.conf
+wal_level = hot_standby
+archive_mode = on
+archive_command = 'cp %p /var/lib/pgsql/9.2/archive/%f'
+max_wal_senders = 3
+wal_keep_segments = 100
+hot_standby = on
+EOF
+````
+
+The PostgreSQL has the concept of archiving for its WAL logs.  Its recommended to create a seperate archive directory, this will be used to store and recover archived WAL logs.  In this example we will create this in the currnet PostgreSQL {version} directory, you can create this anywhere.
+
+This need to be done on **ALL** nodes in the cluster.
+
+````
+sudo runuser -l postgres -c 'mkdir /var/lib/pgsql/9.3/archive'
+````
+
+Start the PostgreSQL service and check for erros in /var/lib/pgsql/9.3/pg_log/*.
+
+````
+sudo /etc/init.d/postgresql-9.3 start
+Starting postgresql-9.3 service:                           [  OK  ]
+````
+````
+tail -F -n3 /var/lib/pgsql/9.3/data/pg_log/postgresql-Fri.log
+< 2014-04-11 07:09:26.780 EDT >LOG:  database system was shut down at 2014-04-11 06:29:14 EDT
+< 2014-04-11 07:09:26.793 EDT >LOG:  database system is ready to accept connections
+< 2014-04-11 07:09:26.793 EDT >LOG:  autovacuum launcher started
+````
+
+Clone the PostgreSQL database cluster from the **Master** node to the replicas (node2, node3).  We are using a modern version of PostgreSQL that include pg_basebackup, which makes the process 1000000000 time simpilar.  
+
+You can also use pg_start_backup, rsync and pg_stop_backup to perform a more manaul cloning.
+
+On the replica nodes (node2, node3) run the pg_basebackup command
+
+````
+sudo runuser -l postgres -c 'pg_basebackup -D /var/lib/pgsql/9.3/data -l `date +"%m-%d-%y"`_initial_cloning -P -h node1.example.com -p 5432 -U replicator -W -X stream'
+````
+
+To avoid any confusion with troubleshooting remove the log files that were transfered during the pg_basebackup process.  This needs to be done on both replicas
+
+````
+sudo rm /var/lib/pgsql/9.3/data/pg_log/*
+````
+
+In order for the replicas to connect to the **Master** for streaming replication a recovery.conf file must exist in the PostgreSQL data directory.
+
+Create a recovery.conf file on both replicas (node2, node3)
+
+````
+cat << EOF >> /var/lib/pgsql/9.3/data/recovery.conf
+standby_mode = 'on'
+primary_conninfo = 'host=10.4.10.63 port=5432 user=replicator application_name=`hostname`'
+restore_command = 'cp /var/lib/pgsql/9.2/archive/%f "%p"'
+EOF
+````
+
+Start the PostgreSQL service on both of the replicas (node2, node3)
+
+````
+sudo /etc/init.d/postgresql-9.3 start
+````
+
+On the **Master** verify and view the active replica connections and their status.  You'll notice the sync_state is async for both nodes, this is because we have not set the standby_node_names parameter on the master to let it know what nodes it should attempt to perform synchronous replication with.  You'll also notice the state is streaming, this is continually sending changes to the replicas/slaves without waiting for WAL segments to fill and then be shipped.
+
+````
+sudo runuser -l postgres -c "psql -c \"SELECT application_name, client_addr, client_hostname, sync_state, state, sync_priority, replay_location FROM pg_stat_replication;\""
+    application_name    | client_addr | client_hostname | sync_state |   state   | sync_priority | replay_location
+------------------------+-------------+-----------------+------------+-----------+---------------+-----------------
+ node2.example.com | 10.4.10.61  |                 | async      | streaming |             0 | 0/40000C8
+ node3.example.com | 10.4.10.62  |                 | async      | streaming |             0 | 0/40000C8
+````
 
 
 
