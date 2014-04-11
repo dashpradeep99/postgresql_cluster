@@ -7,6 +7,8 @@ Building a highly avialable multi-node PostgreSQL cluster, using freely avilable
 ##### Infrastructure
 Three node HotStandby HA cluster
 
+![](https://raw.githubusercontent.com/smbambling/pgsql_ha_cluster/master/postgresql_cluster_pacemaker.png)
+
 ## HA Cluster Installation
 ---
 The required are avilable and included in the base/updates repositories for Centos 6.x.
