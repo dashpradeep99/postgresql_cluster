@@ -4,6 +4,8 @@
 ---
 Building a highly avialable multi-node PostgreSQL cluster, using freely avilable software including [Pacemaker](http://clusterlabs.org/), [Corsync](http://corosync.github.io/corosync/), [Cman](http://www.sourceware.org/cluster/cman/) and [PostgresSQL](http://www.postgresql.org/) on [CentOS](http://www.centos.org/)
 
+![](https://raw.githubusercontent.com/smbambling/pgsql_ha_cluster/3bdf883e0f232318c47cc0201697b26e7e2a61a7/pgha_cluster.png)
+
 ##### Infrastructure
 Three node HotStandby HA cluster
 
