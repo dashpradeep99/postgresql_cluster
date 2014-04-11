@@ -1,5 +1,3 @@
-# Building A Highly Available Multi-Node PostgreSQL Cluster
-
 ## Overview
 ---
 Building a highly avialable multi-node PostgreSQL cluster, using freely avilable software including [Pacemaker](http://clusterlabs.org/), [Corsync](http://corosync.github.io/corosync/), [Cman](http://www.sourceware.org/cluster/cman/) and [PostgresSQL](http://www.postgresql.org/) on [CentOS](http://www.centos.org/)
