@@ -1,3 +1,5 @@
+# Building A Highly Available Multi-Node PostgreSQL Cluster
+
 ## Overview
 ---
 Building a highly avialable multi-node PostgreSQL cluster, using freely avilable software including [Pacemaker](http://clusterlabs.org/), [Corsync](http://corosync.github.io/corosync/), [Cman](http://www.sourceware.org/cluster/cman/) and [PostgresSQL](http://www.postgresql.org/) on [CentOS](http://www.centos.org/)
@@ -14,11 +16,9 @@ From my readings and research it is also possible to use heartbeat 3.x with Pace
 ### Cluster Installation
 ---
 
-#### CMAN/Corosync Cluster Configuration
-
 **!!! Notice !!!**
 
-As of RedHat/CentOS 6.4 crmsh is no longer included in the default repositories.  If you want to use CRM vs PCS You can include the OpenSuse repositories [HERE](http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/RedHat_RHEL-6/). More information on the crmsh can be found [HERE](https://savannah.nongnu.org/forum/forum.php?forum_id=7503)
+> As of RedHat/CentOS 6.4 crmsh is no longer included in the default repositories.  If you want to use CRM vs PCS You can include the OpenSuse repositories [HERE](http://download.opensuse.org/repositories/network:/ha-clustering:/Stable/RedHat_RHEL-6/). More information on the crmsh can be found [HERE](https://savannah.nongnu.org/forum/forum.php?forum_id=7503)
 
 In this turtoial we will add the openSUSE repository to our nodes.  Though I recommend building or copying these packages into a local repository for more controlled management.
 
