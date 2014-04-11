@@ -4,8 +4,6 @@
 ---
 Building a highly avialable multi-node PostgreSQL cluster, using freely avilable software including [Pacemaker](http://clusterlabs.org/), [Corsync](http://corosync.github.io/corosync/), [Cman](http://www.sourceware.org/cluster/cman/) and [PostgresSQL](http://www.postgresql.org/) on [CentOS](http://www.centos.org/)
 
-![](https://raw.githubusercontent.com/smbambling/pgsql_ha_cluster/3bdf883e0f232318c47cc0201697b26e7e2a61a7/pgha_cluster.png)
-
 ##### Infrastructure
 Three node HotStandby HA cluster
 
@@ -51,7 +49,7 @@ sudo yum install pacemaker pcs corosync fence-agents crmsh cman css
 
 The first step is to configure the underlying Cman/Corosync cluster ring communication between the nodes and setup Pacemaker to use Corosync as its communication mechanisum.
 
-For secure communication Corosync requires an pre-shared authkey.  This key must be added to all nodes in the cluste.
+For secure communication Corosync requires an pre-shared authkey.  This key must be added to all nodes in the cluster.
 
 To generate the authkey Corosync has a utility corosync-keygen. Invoke this command as the root users to generate the authkey. The key will be generated at /etc/corosync/authkey.  You only need to perform this action on **one** of the nodes in the cluster as we'll copy it to the other nodes
 
@@ -317,6 +315,8 @@ Now verifying the Pacemaker cluster configuration again returns no errors.
 sudo pcs cluster verify -V
 ````
 
+#### Pacemaker IP Resources
+
 Now that we have a basic cluster configuration setup we can focus on adding some resources for the cluster to manage.  The first resource to add is a cluster IP or "VIP" so that applications will be able to continuously communicate with the cluster regardless of where the cluster services are running.
 
 **Notice** : Replace the **ip** and **cidr_netmask** parameters with the correct address for your cluster.
@@ -418,9 +418,47 @@ Full list of resources:
  pgclivip       (ocf::heartbeat:IPaddr2):       Started node1.example.com
 ````
 
+#### PostgreSQL Database Configuration
 
+Before adding a Pacemaker pgsql resource to manage the PostgreSQL services, its recommended to setup the PostgreSQL cluster (The PostgreSQL internal cluster) with some basic streaming replication.
 
+The version of PostgreSQL that is in the provided repositories on CentOS 6.5 is 8.4.20 which does not provide the needed streaming replication.  To work around this we will add PGDG (PostgreSQL Global Development Group) repository.  
 
+As of this writing we are using PostgreSQL version 9.3.4
+
+Configure the needed repository.  This must be added to all nodes in the cluster.
+
+````
+sudo wget http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-centos93-9.3-1.noarch.rpm -O /tmp/pgdg-centos93-9.3-1.noarch.rpm
+
+sudo rpm -Uvh /tmp/pgdg-centos93-9.3-1.noarch.rpm
+````
+
+With the correct repository configured install the recommended packages.
+
+````
+sudo yum install postgresql93-server postgresql93-contrib postgresql93-devel
+````
+
+Initialize the PostgreSQL database via initdb.  We only need to perform this on one node as we'll be transfering the database to the remaing nodes.  I'll be refering to these nodes as PostgreSQL replicas.  We will use node1 as the **Master** from here on out.
+
+````
+sudo /etc/init.d/postgresql-9.3 initdb
+````
+
+Once the initialization is succesfull you'll see the PostgreSQL data directory populated.  On CentOS this is located in /var/lib/pgsql/{version (9.3)}/data
+
+````
+ls /var/lib/pgsql/9.3/data/
+base  global  pg_clog  pg_hba.conf  pg_ident.conf  pg_log  pg_multixact  pg_notify  pg_serial  pg_snapshots  pg_stat  pg_stat_tmp  pg_subtrans  pg_tblspc  pg_twophase  PG_VERSION  pg_xlog  postgresql.conf
+````
+
+When the database was initialized via initdb it configued permissions in the pg_hba.conf.  This uses the not so popular ident scheme to determine if a user is allowed to connect to the database.
+
+**ident**: An authentication schema that relies on the currently logged in user. If you’ve su -s to postgres and then try to login as another user, ident will fail (as it’s not the currently logged in user).
+
+This can be a sore spot if your not aware how it was configured and will give an error if trying to create a database with a user that is not currently logged into the system.
+> createdb: could not connect to database postgres: FATAL:  Ident authentication failed for user "myUser"
 
 
 
