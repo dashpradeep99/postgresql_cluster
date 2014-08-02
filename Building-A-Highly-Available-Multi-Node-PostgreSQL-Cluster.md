@@ -1,20 +1,17 @@
 # Building A Highly Available Multi-Node PostgreSQL Cluster
 
 ## Overview
----
 Building a highly avialable multi-node PostgreSQL cluster, using freely avilable software including [Pacemaker](http://clusterlabs.org/), [Corsync](http://corosync.github.io/corosync/), [Cman](http://www.sourceware.org/cluster/cman/) and [PostgresSQL](http://www.postgresql.org/) on [CentOS](http://www.centos.org/)
 
 ##### Infrastructure
 Three node HotStandby HA cluster
 
 ## HA Cluster Installation
----
 The required are avilable and included in the base/updates repositories for Centos 6.x.
 
 From my readings and research it is also possible to use heartbeat 3.x with Pacemaker to achive similar results.  I've decided to go with Corosync as its backed by Red Hat and Suse and it looks to have more active development.  Not to memtion that the Pacemaker projects recommends you should use Corosync.
 
 ### Cluster Installation
----
 
 **!!! Notice !!!**
 
@@ -43,7 +40,6 @@ sudo yum install pacemaker pcs corosync fence-agents crmsh cman css
 ````
 
 ### Cluster Configuration
----
 
 The first step is to configure the underlying Cman/Corosync cluster ring communication between the nodes and setup Pacemaker to use Corosync as its communication mechanisum.
 
