@@ -28,7 +28,7 @@ sudo wget -4 http://download.opensuse.org/repositories/network:/ha-clustering:/S
 Limit the packages to be installed from the openSUSE repository
 
 ````
-sudo echo "includepkgs=crmsh pssh" >> /etc/yum.repos.d/network_ha-clustering_Stable.repo
+sudo echo "includepkgs=crmsh pssh crmsh-scripts python-parallax" >> /etc/yum.repos.d/network_ha-clustering_Stable.repo
 ````
 
 Now that we have the required repositories configured we need to install the needed packages.
