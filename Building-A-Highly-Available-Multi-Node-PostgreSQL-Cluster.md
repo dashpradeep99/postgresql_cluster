@@ -67,7 +67,7 @@ Disable quorum in order to allow Cman/Corosync to complete startup in a standalo
 This need to be done on **ALL** nodes in the cluster.
 
 ````
-sudo sed -i.sed "s/.*CMAN_QUORUM_TIMEOUT=.*/CMAN_QUORUM_TIMEOUT=0/g" /etc/sysconfig/cman
+sudo sed -i "s/.*CMAN_QUORUM_TIMEOUT=.*/CMAN_QUORUM_TIMEOUT=0/g" /etc/sysconfig/cman
 ````
 
 Define the cluster, where *pg_cluster* is the cluster name.  This will generate the cluster.conf configuration file.  
