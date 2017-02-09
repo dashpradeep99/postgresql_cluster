@@ -36,7 +36,7 @@ Now that we have the required repositories configured we need to install the nee
 **You will see multiple depenencies being pulled in**
 
 ````
-sudo yum install pacemaker pcs corosync fence-agents crmsh cman css
+sudo yum install pacemaker pcs corosync fence-agents crmsh cman ccs
 ````
 
 ### Cluster Configuration
